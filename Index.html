@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prova de geografia, 2° bimestre</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  /* ── RESET BÁSICO E DESIGN SYSTEM ──────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fdf6f0;
+    --card: #ffffff;
+    --land: #2b2d31;         /* Cor padrão de países não interativos */
+    --land-hover: #c0392b;
+    --target: #e8cfc4;       /* Cor dos 5 países antes de serem descobertos */
+    --target-border: #c0392b;
+    --discovered: #c0392b;   /* Cor romântica quando o país é acertado */
+    --accent: #c0392b;
+    --accent-light: #f5d5d0;
+    --text: #1a1a2e;
+    --muted: #7a7a8c;
+    --ocean: #d6e8f2;        /* Cor de fundo do mapa (Oceano) */
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'Lato', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    color: var(--text);
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  header p {
+    margin-top: 6px;
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* ── CONTAINER DO JOGO (RESPONSIVO) ────────────────────────────────────── */
+  .game-container {
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 1060px;
+    padding: 20px;
+    gap: 20px;
+  }
+  @media (min-width: 800px) {
+    .game-container { flex-direction: row; align-items: stretch; }
+  }
+
+  /* ── ESTILIZAÇÃO DO MAPA (SVG) ─────────────────────────────────────────── */
+  .map-wrapper {
+    flex: 3;
+    background: var(--ocean);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    position: relative; /* Mantém referências absolutas internas controladas */
+  }
+  #world-map {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .country {
+    fill: var(--land);
+    stroke: #ffffff;
+    stroke-width: 0.4;
+    transition: fill 0.25s;
+  }
+  .country.target {
+    fill: var(--target);
+    stroke: var(--target-border);
+    stroke-width: 1;
+    cursor: pointer;
+  }
+  .country.target:hover { fill: #daa89c; }
+  .country.active-selection { fill: #e89c8c !important; }
+  .country.discovered {
+    fill: var(--discovered) !important;
+    stroke: #ffffff !important;
+    stroke-width: 1;
+    cursor: default;
+  }
+
+  /* Hitbox invisível para facilitar o toque na França em telas mobile */
+  .france-touch-helper {
+    fill: transparent;
+    cursor: pointer;
+    pointer-events: all;
+  }
+
+  /* ── PAINEL DA CRIPTOGRAFIA / QUIZ ─────────────────────────────────────── */
+  .quiz-panel {
+    flex: 1;
+    min-width: 220px;
+    background: #fff7f5;
+    border: 1px solid #f0d5cf;
+    border-radius: 16px;
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    transition: background 0.5s;
+  }
+
+  /* Barra de Progresso Superior */
+  #progress-bar-wrap {
+    height: 6px;
+    background: #f0d5cf;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.5s ease;
+  }
+  #progress-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  #game-instruction {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* Grade de Botões de Opções */
+  .options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn-option {
+    background: #fff;
+    border: 2px solid #f0d5cf;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 0.95rem;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Lato', sans-serif;
+    text-align: left;
+    transition: background 0.18s, transform 0.12s, border-color 0.18s;
+  }
+  .btn-option:hover { background: var(--accent-light); transform: translateY(-2px); }
+  .btn-option.correct { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-option.wrong  { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+
+  /* ── MENSAGEM ROMÂNTICA FINAL ──────────────────────────────────────────── */
+  .romantic-message {
+    display: none;
+    text-align: center;
+    animation: fadeUp 0.8s ease forwards;
+  }
+  .romantic-message .heart {
+    font-size: 3.5rem;
+    animation: pulse 1s infinite alternate;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .romantic-message h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent);
+    font-size: 1.3rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .romantic-message p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+
+  @keyframes pulse { to { transform: scale(1.15); } }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Tela Inicial de Carregamento Assíncrono */
+  #loading {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+    z-index: 999;
+    transition: opacity 0.5s;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">Carregando o mapa... 🌍</div>
+
+<header>
+  <h1>Prova de geografia, 2° bimestre</h1>
+  <p>Clique nos países em destaque ou responda pelo painel!</p>
+</header>
+
+<div class="game-container">
+  <div class="map-wrapper">
+    <svg id="world-map" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="quiz-panel" id="quizPanel">
+    <div id="gameActiveInterface">
+      <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+      <div id="progress-label">0 / 5 países</div>
+      <p id="game-instruction">Clique em um país destacado no mapa para começar!</p>
+      <div class="options-grid" id="optionsGrid" style="display:none;"></div>
+    </div>
+    
+    <div class="romantic-message" id="romanticMessage">
+      <span class="heart">♥️</span>
+      <h2>"Você é o centro do meu mundo — e eu nunca precisei de GPS pra te encontrar."</h2>
+      <p>Não importa a distância ou as coordenadas, meu coração sempre orbita você. 🥰</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+// ── BANCO DE DADOS DOS PAÍSES (CÓDIGOS ISO-3166 NUMÉRICOS OFICIAIS) ─────────
+const TARGETS = {
+  840: { id: "eua",    name: "Estados Unidos", options: ["Canadá", "Estados Unidos", "México", "Rússia"] },
+  76:  { id: "brasil", name: "Brasil",          options: ["Argentina", "Colômbia", "Brasil", "Austrália"] },
+  250: { id: "franca", name: "França",          options: ["Alemanha", "França", "Itália", "Espanha"] },
+  818: { id: "egito",  name: "Egito",           options: ["África do Sul", "Egito", "Arábia Saudita", "Índia"] },
+  392: { id: "japao",  name: "Japão",           options: ["China", "Coreia do Sul", "Japão", "Filipinas"] },
+};
+const TOTAL = Object.keys(TARGETS).length;
+
+// ── ESTADO GLOBAL DA APLICAÇÃO ───────────────────────────────────────────────
+let selectedNumId = null;       // Guarda o código numérico do país atualmente selecionado
+const discovered = new Set();    // Armazena os IDs dos países que já foram respondidos corretamente
+
+// ── CAPTURA DE REFERÊNCIAS DO DOM ───────────────────────────────────────────
+const instruction  = document.getElementById('game-instruction');
+const optionsGrid  = document.getElementById('optionsGrid');
+const progressBar  = document.getElementById('progress-bar');
+const progressLbl  = document.getElementById('progress-label');
+const quizPanel    = document.getElementById('quizPanel');
+const gameUI       = document.getElementById('gameActiveInterface');
+const romanticMsg  = document.getElementById('romanticMessage');
+const loadingEl    = document.getElementById('loading');
+
+// ── CONFIGURAÇÃO DE PROJEÇÃO CARTOGRÁFICA (D3.JS) ────────────────────────────
+const svg = d3.select('#world-map');
+const projection = d3.geoNaturalEarth1() // Tipo de visualização plana e elegante da Terra
+  .scale(153)
+  .translate([480, 250]);
+const path = d3.geoPath().projection(projection);
+
+// ── CARREGAMENTO DO MAPA MUNDI ASYNC ─────────────────────────────────────────
+fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+  .then(r => r.json())
+  .then(world => {
+    // Converte a malha TopoJSON estruturada de volta para Geometria GeoJSON limpa
+    const countries = topojson.feature(world, world.objects.countries);
+
+    // Renderização dos caminhos (paths) dos vetores de cada país no SVG
+    svg.selectAll(".country")
+      .data(countries.features)
+      .enter().append("path")
+      .attr("class", d => {
+        const numId = +d.id;
+        return "country" + (TARGETS[numId] ? " target" : "");
+      })
+      .attr("id", d => TARGETS[+d.id] ? TARGETS[+d.id].id : null)
+      .attr("d", path)
+      .on("click", function(event, d) {
+        const numId = +d.id;
+        if (!TARGETS[numId] || discovered.has(numId)) return;
+        setupQuiz(numId);
+      });
+
+    // ── AJUSTE DE PRECISÃO E USABILIDADE: HITBOX DA FRANÇA ───────────────────
+    // Adiciona um círculo invisível de 12px de raio centralizado sobre a Europa Ocidental.
+    // Isso expande significativamente o ponto de clique no mobile, evitando erros.
+    svg.append("circle")
+      .attr("class", "france-touch-helper")
+      .attr("cx", 485)  // Posição X calculada na projeção NaturalEarth1 para o centro da França
+      .attr("cy", 212)  // Posição Y calculada correspondente
+      .attr("r", 12)    // Área de abrangência do clique (ajuste aqui se quiser maior ou menor)
+      .on("click", function(event) {
+        if (discovered.has(250)) return;
+        event.stopPropagation(); // Impede interferência com cliques nas camadas inferiores
+        setupQuiz(250);          // Código 250 ativa o fluxo direto da França
+      });
+
+    // Desativa a tela de loading inicial
+    loadingEl.style.opacity = "0";
+    setTimeout(() => loadingEl.style.display = "none", 500);
+  })
+  .catch(() => {
+    loadingEl.textContent = "Erro ao carregar o mapa. Verifique sua conexão.";
+  });
+
+// ── LÓGICA DO QUIZ INTERATIVO ───────────────────────────────────────────────
+function setupQuiz(numId) {
+  selectedNumId = numId;
+  const info = TARGETS[numId];
+
+  // Limpa estados temporários de seleção em andamento e destaca o país escolhido
+  svg.selectAll(".target:not(.discovered)").classed("active-selection", false);
+  d3.select("#" + info.id).classed("active-selection", true);
+
+  instruction.textContent = "Que país é este destacado no mapa?";
+  optionsGrid.innerHTML = "";
+  optionsGrid.style.display = "flex";
+
+  // Embaralhamento randômico de alternativas (Fórmula de ordenação rápida)
+  const opts = [...info.options].sort(() => Math.random() - 0.5);
+  opts.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "btn-option";
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(opt, btn);
+    optionsGrid.appendChild(btn);
+  });
+}
+
+// Validação da Alternativa Selecionada pelo Usuário
+function checkAnswer(selected, btn) {
+  const correct = TARGETS[selectedNumId].name;
+  
+  if (selected === correct) {
+    btn.classList.add("correct");
+    // Trava todos os botões da rodada para prevenir cliques duplos
+    optionsGrid.querySelectorAll(".btn-option").forEach(b => b.disabled = true);
+
+    // Modifica a classe no mapa usando D3 para congelar na cor definitiva (discovered)
+    d3.select("#" + TARGETS[selectedNumId].id)
+      .classed("active-selection", false)
+      .classed("discovered", true);
+    
+    discovered.add(selectedNumId);
+    updateProgress();
+
+    setTimeout(() => {
+      optionsGrid.style.display = "none";
+      if (discovered.size === TOTAL) {
+        setTimeout(endGame, 400); // Se preencheu os 5, dispara tela final
+      } else {
+        instruction.textContent = "Muito bem! Escolha outro país destacado no mapa. 🎉";
+        selectedNumId = null;
+      }
+    }, 600);
+  } else {
+    // Aplica feedback visual de erro temporário no botão
+    btn.classList.add("wrong");
+    btn.disabled = true;
+    instruction.textContent = "Ops! Tente outra alternativa.";
+    setTimeout(() => btn.classList.remove("wrong"), 800);
+  }
+}
+
+// Atualiza Dinamicamente a Barra de Carregamento e Texto de Progresso Lateral
+function updateProgress() {
+  const pct = (discovered.size / TOTAL) * 100;
+  progressBar.style.width = pct + "%";
+  progressLbl.textContent = `${discovered.size} / ${TOTAL} países`;
+}
+
+// Transiciona a Interface e Exibe a Frase Romântica Pedida
+function endGame() {
+  gameUI.style.display = "none";
+  quizPanel.style.background = "#fff0f2";
+  quizPanel.style.borderColor = "#c0392b";
+  romanticMsg.style.display = "block";
+}
+</script>
+</body>
+</html>
