@@ -244,7 +244,7 @@
     
     <div class="romantic-message" id="romanticMessage">
       <span class="heart">♥️</span>
-      <h2>"Você é o centro do meu mundo — e eu nunca precisei de GPS pra te encontrar."</h2>
+      <h2>"Prova concluída com sucesso"</h2>
       <p>Não importa a distância ou as coordenadas, meu coração sempre orbita você. 🥰</p>
     </div>
   </div>
@@ -312,9 +312,9 @@ fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
     // Isso expande significativamente o ponto de clique no mobile, evitando erros.
     svg.append("circle")
       .attr("class", "france-touch-helper")
-      .attr("cx", 485)  // Posição X calculada na projeção NaturalEarth1 para o centro da França
-      .attr("cy", 212)  // Posição Y calculada correspondente
-      .attr("r", 12)    // Área de abrangência do clique (ajuste aqui se quiser maior ou menor)
+      .attr("cx", 490)  // Posição X calculada na projeção NaturalEarth1 para o centro da França
+      .attr("cy", 120)  // Posição Y calculada correspondente
+      .attr("r", 35)    // Área de abrangência do clique (ajuste aqui se quiser maior ou menor)
       .on("click", function(event) {
         if (discovered.has(250)) return;
         event.stopPropagation(); // Impede interferência com cliques nas camadas inferiores
